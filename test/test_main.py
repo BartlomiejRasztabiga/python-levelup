@@ -35,3 +35,11 @@ def test_json_echo():
 
     assert response.status_code == 200
     assert response.json() == json_body
+
+
+@pytest.mark.parametrize("method", ["GET", "POST", "PUT", "DELETE"])
+def test_return_method(method: str):
+    response = client.request(method, '/method')
+
+    assert response.status_code == 200
+    assert response.json() == {'method': method}
