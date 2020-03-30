@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from pydantic import BaseModel
 
 app = FastAPI()
 
 app.counter = 0
 app.next_patient_id = 0
+app.patients = {}
 
 
 class HelloNameResponse(BaseModel):
@@ -59,7 +60,17 @@ def return_method(request: Request):
     return HttpMethodResponse(method=request.method)
 
 
-@app.post('/patient', response_model=PatientResponse)
+@app.post('/patient', status_code=201, response_model=PatientResponse)
 def create_patient(req: PatientRequest):
     app.next_patient_id += 1
-    return PatientResponse(id=app.next_patient_id, patient=PatientRequest(name=req.name, surename=req.surename))
+    patient = PatientResponse(id=app.next_patient_id, patient=PatientRequest(name=req.name, surename=req.surename))
+    app.patients[patient.id] = patient
+    return patient
+
+
+@app.get('/patient/{patient_id}', response_model=PatientResponse)
+def get_patient(patient_id: int):
+    if patient_id not in app.patients:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    else:
+        return app.patients[patient_id]

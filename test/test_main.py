@@ -49,5 +49,27 @@ def test_create_patient():
     json_body = {'name': 'Jan', 'surename': 'Kowalski'}
     response = client.post('/patient', json=json_body)
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json() == {'id': 1, 'patient': {'name': 'Jan', 'surename': 'Kowalski'}}
+
+
+def test_get_patient():
+    # first insert the patient
+    json_body = {'name': 'Jan', 'surename': 'Kowalski'}
+    response = client.post('/patient', json=json_body)
+
+    inserted_patient = response.json()
+    patient_id = inserted_patient['id']
+
+    print(inserted_patient)
+
+    # then test whether we can retrieve him
+    response = client.get(f'/patient/{patient_id}')
+
+    assert response.status_code == 200
+    assert response.json() == inserted_patient
+
+    # test error code when retrieving patient that doesnt exist
+    response = client.get('/patient/999')
+    assert response.status_code == 404
+    assert response.json() == {'detail': 'Patient not found'}
