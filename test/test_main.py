@@ -49,7 +49,7 @@ def test_create_patient():
     json_body = {'name': 'Jan', 'surename': 'Kowalski'}
     response = client.post('/patient', json=json_body)
 
-    assert response.status_code == 201
+    assert response.status_code == 200
     assert response.json() == {'id': 1, 'patient': {'name': 'Jan', 'surename': 'Kowalski'}}
 
 

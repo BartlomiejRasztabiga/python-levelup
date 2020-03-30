@@ -65,7 +65,7 @@ def return_method(request: Request):
     return HttpMethodResponse(method=request.method)
 
 
-@app.post('/patient', status_code=201, response_model=CreatePatientResponse)
+@app.post('/patient', response_model=CreatePatientResponse)
 def create_patient(req: PatientRequest):
     app.next_patient_id += 1
     patient = PatientRequest(name=req.name, surename=req.surename)
