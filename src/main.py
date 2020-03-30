@@ -4,6 +4,7 @@ from pydantic import BaseModel
 app = FastAPI()
 
 app.counter = 0
+app.next_patient_id = 0
 
 
 class HelloNameResponse(BaseModel):
@@ -20,6 +21,16 @@ class JsonEchoResponse(BaseModel):
 
 class HttpMethodResponse(BaseModel):
     method: str
+
+
+class PatientRequest(BaseModel):
+    name: str
+    surename: str
+
+
+class PatientResponse(BaseModel):
+    id: int
+    patient: PatientRequest
 
 
 @app.get('/')
@@ -46,3 +57,9 @@ def json_echo(req: JsonEchoRequest):
 @app.api_route('/method', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def return_method(request: Request):
     return HttpMethodResponse(method=request.method)
+
+
+@app.post('/patient', response_model=PatientResponse)
+def create_patient(req: PatientRequest):
+    app.next_patient_id += 1
+    return PatientResponse(id=app.next_patient_id, patient=PatientRequest(name=req.name, surename=req.surename))
