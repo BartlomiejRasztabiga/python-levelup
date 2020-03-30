@@ -50,7 +50,7 @@ def test_create_patient():
     response = client.post('/patient', json=json_body)
 
     assert response.status_code == 200
-    assert response.json() == {'id': 1, 'patient': {'name': 'Jan', 'surename': 'Kowalski'}}
+    assert response.json() == {'id': 0, 'patient': {'name': 'Jan', 'surename': 'Kowalski'}}
 
 
 def test_get_patient():

@@ -4,7 +4,7 @@ from pydantic import BaseModel
 app = FastAPI()
 
 app.counter = 0
-app.next_patient_id = 0
+app.next_patient_id = -1
 app.patients = {}
 
 
