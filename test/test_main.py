@@ -27,3 +27,11 @@ def test_counter():
     # 2nd request to increment counter
     response = client.get('/counter')
     assert response.json() == {'counter': 2}
+
+
+def test_json_echo():
+    json_body = {'key': 'value'}
+    response = client.post('/json', json=json_body)
+
+    assert response.status_code == 200
+    assert response.json() == json_body
