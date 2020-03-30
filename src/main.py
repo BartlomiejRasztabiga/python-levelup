@@ -71,6 +71,6 @@ def create_patient(req: PatientRequest):
 @app.get('/patient/{patient_id}', response_model=PatientResponse)
 def get_patient(patient_id: int):
     if patient_id not in app.patients:
-        raise HTTPException(status_code=404, detail="Patient not found")
+        raise HTTPException(status_code=204, detail="Patient not found")
     else:
         return app.patients[patient_id]

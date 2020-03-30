@@ -71,5 +71,5 @@ def test_get_patient():
 
     # test error code when retrieving patient that doesnt exist
     response = client.get('/patient/999')
-    assert response.status_code == 404
+    assert response.status_code == 204
     assert response.json() == {'detail': 'Patient not found'}
