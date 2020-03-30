@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -16,6 +16,10 @@ class JsonEchoRequest(BaseModel):
 
 class JsonEchoResponse(BaseModel):
     key: str
+
+
+class HttpMethodResponse(BaseModel):
+    method: str
 
 
 @app.get('/')
@@ -37,3 +41,8 @@ def counter():
 @app.post('/json', response_model=JsonEchoResponse)
 def json_echo(req: JsonEchoRequest):
     return JsonEchoResponse(key=req.key)
+
+
+@app.api_route('/method', methods=['GET', 'POST', 'PUT', 'DELETE'])
+def return_method(request: Request):
+    return HttpMethodResponse(method=request.method)
