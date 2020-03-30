@@ -61,13 +61,11 @@ def test_get_patient():
     inserted_patient = response.json()
     patient_id = inserted_patient['id']
 
-    print(inserted_patient)
-
     # then test whether we can retrieve him
     response = client.get(f'/patient/{patient_id}')
 
     assert response.status_code == 200
-    assert response.json() == inserted_patient
+    assert response.json() == inserted_patient['patient']
 
     # test error code when retrieving patient that doesnt exist
     response = client.get('/patient/999')

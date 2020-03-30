@@ -29,9 +29,14 @@ class PatientRequest(BaseModel):
     surename: str
 
 
-class PatientResponse(BaseModel):
+class CreatePatientResponse(BaseModel):
     id: int
     patient: PatientRequest
+
+
+class PatientResponse(BaseModel):
+    name: str
+    surename: str
 
 
 @app.get('/')
@@ -60,12 +65,12 @@ def return_method(request: Request):
     return HttpMethodResponse(method=request.method)
 
 
-@app.post('/patient', status_code=201, response_model=PatientResponse)
+@app.post('/patient', status_code=201, response_model=CreatePatientResponse)
 def create_patient(req: PatientRequest):
     app.next_patient_id += 1
-    patient = PatientResponse(id=app.next_patient_id, patient=PatientRequest(name=req.name, surename=req.surename))
-    app.patients[patient.id] = patient
-    return patient
+    patient = PatientRequest(name=req.name, surename=req.surename)
+    app.patients[app.next_patient_id] = patient
+    return CreatePatientResponse(id=app.next_patient_id, patient=patient)
 
 
 @app.get('/patient/{patient_id}', response_model=PatientResponse)
