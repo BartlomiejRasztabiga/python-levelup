@@ -9,5 +9,5 @@ def hello_world():
 
 
 @app.get('/hello/{name}')
-def hello_name(name: str):
+async def hello_name(name: str):
     return {'message': f'Hello {name}!'}

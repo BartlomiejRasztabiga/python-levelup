@@ -11,8 +11,8 @@ def test_hello_world():
     assert response.json() == {'message': 'Hello World during the coronavirus pandemic!'}
 
 
-def test_hello_name():
-    name = 'test'
+@pytest.mark.parametrize("name", ['Adam', 'Kuba', 'BardzoDlugieImie'])
+def test_hello_name(name):
     response = client.get(f'/hello/{name}')
     assert response.status_code == 200
     assert response.json() == {'message': f'Hello {name}!'}
