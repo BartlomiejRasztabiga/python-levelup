@@ -16,3 +16,14 @@ def test_hello_name(name):
     response = client.get(f'/hello/{name}')
     assert response.status_code == 200
     assert response.json() == {'message': f'Hello {name}!'}
+
+
+def test_counter():
+    # 1st request to increment counter
+    response = client.get('/counter')
+    assert response.status_code == 200
+    assert response.json() == {'counter': 1}
+
+    # 2nd request to increment counter
+    response = client.get('/counter')
+    assert response.json() == {'counter': 2}
