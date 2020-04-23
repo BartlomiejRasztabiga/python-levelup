@@ -132,18 +132,18 @@ def logout(SESSIONID: str = Cookie(None)):
         return response
 
 
-@authenticate
 @app.post('/patient', response_model=CreatePatientResponse)
-def create_patient(req: PatientRequest):
+@authenticate
+def create_patient(req: PatientRequest, SESSIONID: str = Cookie(None)):
     app.next_patient_id += 1
     patient = PatientRequest(name=req.name, surename=req.surename)
     app.patients[app.next_patient_id] = patient
     return CreatePatientResponse(id=app.next_patient_id, patient=patient)
 
 
-@authenticate
 @app.get('/patient/{patient_id}', response_model=PatientResponse)
-def get_patient(patient_id: int):
+@authenticate
+def get_patient(patient_id: int, SESSIONID: str = Cookie(None)):
     if patient_id not in app.patients:
         raise HTTPException(status_code=204)
     else:
