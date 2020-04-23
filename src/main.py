@@ -1,34 +1,22 @@
 import secrets
 import uuid
 
-from fastapi import FastAPI, Request, HTTPException, Depends
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from fastapi.security.base import SecurityBase
-from pydantic import BaseModel
+from fastapi.security import HTTPBasic
+
 from starlette import status
-from starlette.responses import RedirectResponse
 
 from typing import Optional
 import base64
-# from passlib.context import CryptContext
-# from datetime import datetime, timedelta
-#
-# import jwt
-# from jwt import PyJWTError
 
 from pydantic import BaseModel
 
 from fastapi import Depends, FastAPI, HTTPException
-from fastapi.encoders import jsonable_encoder
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2
+
 from fastapi.security.base import SecurityBase
 from fastapi.security.utils import get_authorization_scheme_param
-from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
-from fastapi.openapi.utils import get_openapi
 
 from starlette.status import HTTP_403_FORBIDDEN
-from starlette.responses import RedirectResponse, Response, JSONResponse
+from starlette.responses import RedirectResponse, Response
 from starlette.requests import Request
 
 app = FastAPI()
