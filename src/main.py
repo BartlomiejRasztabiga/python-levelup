@@ -1,5 +1,5 @@
-import secrets
 import uuid
+from functools import wraps
 
 from fastapi.security import HTTPBasic
 
@@ -26,22 +26,6 @@ app.counter = 0
 app.next_patient_id = -1
 app.patients = {}
 app.sessions = {}
-
-
-class HelloNameResponse(BaseModel):
-    message: str
-
-
-class JsonEchoRequest(BaseModel):
-    key: str
-
-
-class JsonEchoResponse(BaseModel):
-    key: str
-
-
-class HttpMethodResponse(BaseModel):
-    method: str
 
 
 class PatientRequest(BaseModel):
@@ -81,6 +65,20 @@ basic_auth = BasicAuth(auto_error=False)
 fake_users_db = {'trudnY': 'PaC13Nt'}
 
 
+def authenticate(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        session_id = kwargs['SESSIONID']
+
+        if session_id is not None and session_id in app.sessions:
+            return f(*args, **kwargs)
+        else:
+            response = Response(headers={"WWW-Authenticate": "Basic"}, status_code=401)
+            return response
+
+    return wrapper
+
+
 def authenticate_user(users_db, username, password):
     if username in users_db and users_db[username] == password:
         return username
@@ -98,7 +96,7 @@ def welcome():
 
 
 @app.post('/login')
-def authenticate(auth: BasicAuth = Depends(basic_auth)):
+def login(auth: BasicAuth = Depends(basic_auth)):
     if not auth:
         response = Response(headers={"WWW-Authenticate": "Basic"}, status_code=403)
         return response
@@ -123,38 +121,18 @@ def authenticate(auth: BasicAuth = Depends(basic_auth)):
 
 
 @app.post('/logout')
-def logout(*, SESSIONID: str = Cookie(None)):
-    print(app.sessions)
-    print(SESSIONID)
+def logout(SESSIONID: str = Cookie(None)):
     if SESSIONID is not None and SESSIONID in app.sessions:
         app.sessions.pop(SESSIONID)
-        return Response(status_code=200)
+        response = RedirectResponse(url='/', status_code=status.HTTP_302_FOUND)
+        return response
     else:
         response = Response(headers={"WWW-Authenticate": "Basic"}, status_code=401)
+        response.set_cookie('SESSIONID', value='', httponly=True, max_age=0, expires=0)
         return response
 
 
-@app.get('/hello/{name}', response_model=HelloNameResponse)
-async def hello_name(name: str):
-    return HelloNameResponse(message=f'Hello {name}!')
-
-
-@app.get('/counter')
-def counter():
-    app.counter += 1
-    return {'counter': app.counter}
-
-
-@app.post('/json', response_model=JsonEchoResponse)
-def json_echo(req: JsonEchoRequest):
-    return JsonEchoResponse(key=req.key)
-
-
-@app.api_route('/method', methods=['GET', 'POST', 'PUT', 'DELETE'])
-def return_method(request: Request):
-    return HttpMethodResponse(method=request.method)
-
-
+@authenticate
 @app.post('/patient', response_model=CreatePatientResponse)
 def create_patient(req: PatientRequest):
     app.next_patient_id += 1
@@ -163,6 +141,7 @@ def create_patient(req: PatientRequest):
     return CreatePatientResponse(id=app.next_patient_id, patient=patient)
 
 
+@authenticate
 @app.get('/patient/{patient_id}', response_model=PatientResponse)
 def get_patient(patient_id: int):
     if patient_id not in app.patients:
