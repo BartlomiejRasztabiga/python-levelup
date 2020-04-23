@@ -44,6 +44,11 @@ def hello_world():
     return {'message': 'Hello World during the coronavirus pandemic!'}
 
 
+@app.get('/welcome')
+def welcome():
+    return {'message': 'Welcome!'}
+
+
 @app.get('/hello/{name}', response_model=HelloNameResponse)
 async def hello_name(name: str):
     return HelloNameResponse(message=f'Hello {name}!')
