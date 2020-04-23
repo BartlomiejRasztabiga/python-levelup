@@ -10,7 +10,7 @@ import base64
 
 from pydantic import BaseModel
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Cookie
 
 from fastapi.security.base import SecurityBase
 from fastapi.security.utils import get_authorization_scheme_param
@@ -110,7 +110,7 @@ def authenticate(auth: BasicAuth = Depends(basic_auth)):
         if user is None:
             raise HTTPException(status_code=401, detail="Incorrect email or password")
 
-        session_id = uuid.uuid4()
+        session_id = str(uuid.uuid4())
         app.sessions[session_id] = {'username': user}
 
         response = RedirectResponse(url='/welcome', status_code=status.HTTP_302_FOUND)
@@ -118,6 +118,18 @@ def authenticate(auth: BasicAuth = Depends(basic_auth)):
         return response
 
     except Exception:
+        response = Response(headers={"WWW-Authenticate": "Basic"}, status_code=401)
+        return response
+
+
+@app.post('/logout')
+def logout(*, SESSIONID: str = Cookie(None)):
+    print(app.sessions)
+    print(SESSIONID)
+    if SESSIONID is not None and SESSIONID in app.sessions:
+        app.sessions.pop(SESSIONID)
+        return Response(status_code=200)
+    else:
         response = Response(headers={"WWW-Authenticate": "Basic"}, status_code=401)
         return response
 
