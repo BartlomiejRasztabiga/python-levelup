@@ -1,12 +1,11 @@
 import uuid
+import base64
+
 from functools import wraps
 
 from fastapi.security import HTTPBasic
 
-from starlette import status
-
 from typing import Optional
-import base64
 
 from pydantic import BaseModel
 
@@ -15,9 +14,11 @@ from fastapi import Depends, FastAPI, HTTPException, Cookie
 from fastapi.security.base import SecurityBase
 from fastapi.security.utils import get_authorization_scheme_param
 
-from starlette.status import HTTP_403_FORBIDDEN
+from starlette import status
 from starlette.responses import RedirectResponse, Response
 from starlette.requests import Request
+
+from fastapi.templating import Jinja2Templates
 
 app = FastAPI()
 security = HTTPBasic()
@@ -54,7 +55,7 @@ class BasicAuth(SecurityBase):
         if not authorization or scheme.lower() != "basic":
             if self.auto_error:
                 raise HTTPException(
-                    status_code=HTTP_403_FORBIDDEN, detail="Not authenticated"
+                    status_code=status.HTTP_403_FORBIDDEN, detail="Not authenticated"
                 )
             else:
                 return None
@@ -63,6 +64,7 @@ class BasicAuth(SecurityBase):
 
 basic_auth = BasicAuth(auto_error=False)
 fake_users_db = {'trudnY': 'PaC13Nt'}
+templates = Jinja2Templates(directory="templates")
 
 
 def authenticate(f):
@@ -91,8 +93,12 @@ def hello_world():
 
 
 @app.get('/welcome')
-def welcome():
-    return {'message': 'Welcome!'}
+@authenticate
+def welcome(request: Request, SESSIONID: str = Cookie(None)):
+    user = app.sessions[SESSIONID]
+    username = user['username']
+
+    return templates.TemplateResponse("welcome.html", {'request': request, 'username': username})
 
 
 @app.post('/login')
