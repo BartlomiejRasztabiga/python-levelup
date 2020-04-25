@@ -24,7 +24,7 @@ app = FastAPI()
 security = HTTPBasic()
 app.sessions = {}
 
-app.next_patient_id = -1
+app.next_patient_id = 0
 app.patients = {}
 
 
