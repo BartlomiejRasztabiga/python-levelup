@@ -22,26 +22,20 @@ from fastapi.templating import Jinja2Templates
 
 app = FastAPI()
 security = HTTPBasic()
+app.sessions = {}
 
-app.counter = 0
 app.next_patient_id = -1
 app.patients = {}
-app.sessions = {}
 
 
 class PatientRequest(BaseModel):
     name: str
-    surename: str
-
-
-class CreatePatientResponse(BaseModel):
-    id: int
-    patient: PatientRequest
+    surname: str
 
 
 class PatientResponse(BaseModel):
     name: str
-    surename: str
+    surname: str
 
 
 class BasicAuth(SecurityBase):
@@ -85,11 +79,6 @@ def authenticate_user(users_db, username, password):
     if username in users_db and users_db[username] == password:
         return username
     return None
-
-
-@app.get('/')
-def hello_world():
-    return {'message': 'Hello World during the coronavirus pandemic!'}
 
 
 @app.get('/welcome')
@@ -138,13 +127,20 @@ def logout(SESSIONID: str = Cookie(None)):
         return response
 
 
-@app.post('/patient', response_model=CreatePatientResponse)
+@app.get('/patient')
+@authenticate
+def get_patients(SESSIONID: str = Cookie(None)):
+    return app.patients
+
+
+@app.post('/patient')
 @authenticate
 def create_patient(req: PatientRequest, SESSIONID: str = Cookie(None)):
+    patient = req
     app.next_patient_id += 1
-    patient = PatientRequest(name=req.name, surename=req.surename)
     app.patients[app.next_patient_id] = patient
-    return CreatePatientResponse(id=app.next_patient_id, patient=patient)
+    response = RedirectResponse(url='/patient/{}'.format(app.next_patient_id), status_code=status.HTTP_302_FOUND)
+    return response
 
 
 @app.get('/patient/{patient_id}', response_model=PatientResponse)
@@ -154,3 +150,13 @@ def get_patient(patient_id: int, SESSIONID: str = Cookie(None)):
         raise HTTPException(status_code=204)
     else:
         return app.patients[patient_id]
+
+
+@app.delete('/patient/{patient_id}')
+@authenticate
+def delete_patient(patient_id: int, SESSIONID: str = Cookie(None)):
+    if patient_id not in app.patients:
+        raise HTTPException(status_code=204)
+    else:
+        del app.patients[patient_id]
+        return Response(status_code=200)
