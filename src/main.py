@@ -156,7 +156,7 @@ def get_patient(patient_id: int, SESSIONID: str = Cookie(None)):
 @authenticate
 def delete_patient(patient_id: int, SESSIONID: str = Cookie(None)):
     if patient_id not in app.patients:
-        raise HTTPException(status_code=204)
+        raise HTTPException(status_code=200)
     else:
         del app.patients[patient_id]
         return Response(status_code=200)
