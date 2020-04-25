@@ -28,7 +28,7 @@ def test_get_patient():
     json_body = {'name': 'Jan', 'surname': 'Kowalski'}
     response = client.post('/patient', json=json_body, cookies=response.cookies)
 
-    patient_id = 0
+    patient_id = 1
 
     # then test whether we can retrieve him
     response = client.get(f'/patient/{patient_id}')
