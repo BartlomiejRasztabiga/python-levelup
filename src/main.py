@@ -167,6 +167,8 @@ async def update_customer(customer_id: int, customer: Customer):
 async def get_sales(category: str):
     if category == "customers":
         return await get_sales_for_customers()
+    elif category == "genres":
+        return await get_sales_for_genres()
 
     error = {'detail': {'error': 'No category with name {} found'.format(category)}}
     response = Response(status_code=404, content=json.dumps(error))
@@ -175,8 +177,17 @@ async def get_sales(category: str):
 
 async def get_sales_for_customers():
     app.db_connection.row_factory = sqlite3.Row
-    cursor = await app.db_connection.execute('SELECT customers.CustomerId, Email, Phone, round(SUM(invoices.Total),2) AS Sum FROM customers JOIN invoices ON invoices.CustomerId = customers.CustomerId GROUP BY customers.CustomerId ORDER BY Sum DESC, customers.CustomerId',
-                                             {})
+    cursor = await app.db_connection.execute(
+        'SELECT customers.CustomerId, Email, Phone, round(SUM(invoices.Total),2) AS Sum FROM customers JOIN invoices ON invoices.CustomerId = customers.CustomerId GROUP BY customers.CustomerId ORDER BY Sum DESC, customers.CustomerId')
+
+    sales = await cursor.fetchall()
+    return sales
+
+
+async def get_sales_for_genres():
+    app.db_connection.row_factory = sqlite3.Row
+    cursor = await app.db_connection.execute(
+        'SELECT genres.Name, SUM(invoice_items.Quantity) AS Sum FROM genres JOIN tracks ON tracks.GenreId = genres.GenreId JOIN invoice_items ON invoice_items.TrackId = tracks.TrackId GROUP BY genres.Name ORDER BY Sum DESC')
 
     sales = await cursor.fetchall()
     return sales
