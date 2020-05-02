@@ -175,7 +175,7 @@ async def get_sales(category: str):
 
 async def get_sales_for_customers():
     app.db_connection.row_factory = sqlite3.Row
-    cursor = await app.db_connection.execute('SELECT customers.CustomerId, Email, Phone, round(SUM(invoices.Total),2) AS Sum FROM customers JOIN invoices ON invoices.CustomerId = customers.CustomerId GROUP BY customers.CustomerId ORDER BY Sum, customers.CustomerId',
+    cursor = await app.db_connection.execute('SELECT customers.CustomerId, Email, Phone, round(SUM(invoices.Total),2) AS Sum FROM customers JOIN invoices ON invoices.CustomerId = customers.CustomerId GROUP BY customers.CustomerId ORDER BY Sum DESC, customers.CustomerId',
                                              {})
 
     sales = await cursor.fetchall()
