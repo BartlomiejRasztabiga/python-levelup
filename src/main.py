@@ -150,16 +150,36 @@ async def update_customer(customer_id: int, customer: Customer):
         error = {'detail': {'error': 'No customer with id {} found'.format(customer_id)}}
         response = Response(status_code=404, content=json.dumps(error))
         return response
-    print(customer)
+
     cursor = await app.db_connection.execute(
         "UPDATE customers SET Company=coalesce(?, Company), Address=coalesce(?, Address), City=coalesce(?, City), State=coalesce(?, State), Country=coalesce(?, Country), PostalCode=coalesce(?, PostalCode), Fax=coalesce(?, Fax) WHERE CustomerId=?",
-        (customer.company, customer.address, customer.city, customer.state, customer.country, customer.postalcode, customer.fax, customer_id))
+        (customer.company, customer.address, customer.city, customer.state, customer.country, customer.postalcode,
+         customer.fax, customer_id))
     await app.db_connection.commit()
 
     cursor = await app.db_connection.execute('SELECT * FROM customers WHERE CustomerId = :customer_id',
                                              {'customer_id': customer_id})
     customer_t = await cursor.fetchone()
     return customer_t
+
+
+@app.get("/sales")
+async def get_sales(category: str):
+    if category == "customers":
+        return await get_sales_for_customers()
+
+    error = {'detail': {'error': 'No category with name {} found'.format(category)}}
+    response = Response(status_code=404, content=json.dumps(error))
+    return response
+
+
+async def get_sales_for_customers():
+    app.db_connection.row_factory = sqlite3.Row
+    cursor = await app.db_connection.execute('SELECT customers.CustomerId, Email, Phone, round(SUM(invoices.Total),2) AS Sum FROM customers JOIN invoices ON invoices.CustomerId = customers.CustomerId GROUP BY customers.CustomerId ORDER BY Sum, customers.CustomerId',
+                                             {})
+
+    sales = await cursor.fetchall()
+    return sales
 
 
 @app.get("/")
