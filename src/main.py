@@ -81,8 +81,9 @@ async def get_tracks(page: int = 0, per_page: int = 10):
 async def get_tracks_by_composer(composer_name: str):
     # app.db_connection.row_factory = sqlite3.Row
     app.db_connection.row_factory = lambda cursor, x: x[0]
-    cursor = await app.db_connection.execute("SELECT Name FROM tracks WHERE Composer = :composer_name ORDER BY Name",
-                                             {'composer_name': composer_name})
+    cursor = await app.db_connection.execute(
+        "SELECT Name FROM tracks WHERE Composer LIKE :composer_name ORDER BY Name",
+        {'composer_name': '%' + composer_name + '%'})
     tracks = await cursor.fetchall()
     if len(tracks) == 0:
         error = {'detail': {'error': 'No composer {} found'.format(composer_name)}}
