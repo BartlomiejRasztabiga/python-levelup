@@ -23,6 +23,16 @@ class Album(BaseModel):
     artist_id: int
 
 
+class Customer(BaseModel):
+    company: str = None
+    address: str = None
+    city: str = None
+    state: str = None
+    country: str = None
+    postalcode: str = None
+    fax: str = None
+
+
 class DaftAPI(FastAPI):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -127,6 +137,29 @@ async def get_album(album_id: int):
                                              {'album_id': album_id})
     album = await cursor.fetchone()
     return album
+
+
+@app.put("/customers/{customer_id}")
+async def update_customer(customer_id: int, customer: Customer):
+    app.db_connection.row_factory = sqlite3.Row
+    cursor = await app.db_connection.execute('SELECT * FROM customers WHERE CustomerId = :customer_id',
+                                             {'customer_id': customer_id})
+    customer_t = await cursor.fetchone()
+
+    if customer_t is None:
+        error = {'detail': {'error': 'No customer with id {} found'.format(customer_id)}}
+        response = Response(status_code=404, content=json.dumps(error))
+        return response
+    print(customer)
+    cursor = await app.db_connection.execute(
+        "UPDATE customers SET Company=coalesce(?, Company), Address=coalesce(?, Address), City=coalesce(?, City), State=coalesce(?, State), Country=coalesce(?, Country), PostalCode=coalesce(?, PostalCode), Fax=coalesce(?, Fax) WHERE CustomerId=?",
+        (customer.company, customer.address, customer.city, customer.state, customer.country, customer.postalcode, customer.fax, customer_id))
+    await app.db_connection.commit()
+
+    cursor = await app.db_connection.execute('SELECT * FROM customers WHERE CustomerId = :customer_id',
+                                             {'customer_id': customer_id})
+    customer_t = await cursor.fetchone()
+    return customer_t
 
 
 @app.get("/")
