@@ -1,4 +1,7 @@
 import secrets
+import sqlite3
+
+import aiosqlite
 from typing import Dict, Optional
 
 from fastapi import Depends, FastAPI, Response, status, Request, HTTPException
@@ -52,6 +55,24 @@ def authethicate(credentials: Optional[HTTPBasicCredentials] = Depends(app.secur
     if not (correct_username and correct_password):
         return False
     return True
+
+
+@app.on_event("startup")
+async def startup():
+    app.db_connection = await aiosqlite.connect('chinook.db')
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    await app.db_connection.close()
+
+
+@app.get("/tracks")
+async def get_tracks():
+    app.db_connection.row_factory = sqlite3.Row
+    cursor = await app.db_connection.execute("SELECT * FROM tracks")
+    tracks = await cursor.fetchall()
+    return tracks
 
 
 @app.get("/")
