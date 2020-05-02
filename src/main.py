@@ -1,162 +1,112 @@
-import uuid
-import base64
+import secrets
+from typing import Dict, Optional
 
-from functools import wraps
-
-from fastapi.security import HTTPBasic
-
-from typing import Optional
-
-from pydantic import BaseModel
-
-from fastapi import Depends, FastAPI, HTTPException, Cookie
-
-from fastapi.security.base import SecurityBase
-from fastapi.security.utils import get_authorization_scheme_param
-
-from starlette import status
-from starlette.responses import RedirectResponse, Response
-from starlette.requests import Request
-
+from fastapi import Depends, FastAPI, Response, status, Request, HTTPException
 from fastapi.templating import Jinja2Templates
-
-app = FastAPI()
-security = HTTPBasic()
-app.sessions = {}
-
-app.next_patient_id = 0
-app.patients = {}
+from fastapi.security import APIKeyCookie, HTTPBasic, HTTPBasicCredentials
+from jose import jwt
+from pydantic import BaseModel
+from starlette.responses import RedirectResponse
 
 
-class PatientRequest(BaseModel):
+class Patient(BaseModel):
     name: str
     surname: str
 
 
-class PatientResponse(BaseModel):
-    name: str
-    surname: str
+class DaftAPI(FastAPI):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.counter: int = 0
+        self.storage: Dict[int, Patient] = {}
+        self.security = HTTPBasic(auto_error=False)
+        self.secret_key = "kluczyk"
+        self.API_KEY = "session"
+        self.cookie_sec = APIKeyCookie(name=self.API_KEY, auto_error=False)
+        self.templates = Jinja2Templates(directory="templates")
 
 
-class BasicAuth(SecurityBase):
-    def __init__(self, scheme_name: str = None, auto_error: bool = True):
-        self.scheme_name = scheme_name or self.__class__.__name__
-        self.auto_error = auto_error
-
-    async def __call__(self, request: Request) -> Optional[str]:
-        authorization: str = request.headers.get("Authorization")
-        scheme, param = get_authorization_scheme_param(authorization)
-        if not authorization or scheme.lower() != "basic":
-            if self.auto_error:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN, detail="Not authenticated"
-                )
-            else:
-                return None
-        return param
+app = DaftAPI()
 
 
-basic_auth = BasicAuth(auto_error=False)
-fake_users_db = {'trudnY': 'PaC13Nt'}
-templates = Jinja2Templates(directory="templates")
-
-
-def authenticate(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        session_id = kwargs['SESSIONID']
-
-        if session_id is not None and session_id in app.sessions:
-            return f(*args, **kwargs)
-        else:
-            response = Response(headers={"WWW-Authenticate": "Basic"}, status_code=401)
-            return response
-
-    return wrapper
-
-
-def authenticate_user(users_db, username, password):
-    if username in users_db and users_db[username] == password:
-        return username
-    return None
-
-
-@app.get('/welcome')
-@authenticate
-def welcome(request: Request, SESSIONID: str = Cookie(None)):
-    user = app.sessions[SESSIONID]
-    username = user['username']
-
-    return templates.TemplateResponse("welcome.html", {'request': request, 'username': username})
-
-
-@app.post('/login')
-def login(auth: BasicAuth = Depends(basic_auth)):
-    if not auth:
-        response = Response(headers={"WWW-Authenticate": "Basic"}, status_code=403)
-        return response
-
+def is_logged(session: str = Depends(app.cookie_sec), silent: bool = False):
     try:
-        decoded = base64.b64decode(auth).decode("ascii")
-        username, _, password = decoded.partition(":")
-        user = authenticate_user(fake_users_db, username, password)
-        if user is None:
-            raise HTTPException(status_code=401, detail="Incorrect email or password")
-
-        session_id = str(uuid.uuid4())
-        app.sessions[session_id] = {'username': user}
-
-        response = RedirectResponse(url='/welcome', status_code=status.HTTP_302_FOUND)
-        response.set_cookie('SESSIONID', value=str(session_id), httponly=True, max_age=1800, expires=1800)
-        return response
-
+        payload = jwt.decode(session, app.secret_key)
+        return payload.get("magic_key")
     except Exception:
+        pass
+
+    if silent:
+        return False
+
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+
+def authethicate(credentials: Optional[HTTPBasicCredentials] = Depends(app.security)):
+    if not credentials:
+        return False
+
+    correct_username = secrets.compare_digest(credentials.username, "trudnY")
+    correct_password = secrets.compare_digest(credentials.password, "PaC13Nt")
+
+    if not (correct_username and correct_password):
+        return False
+    return True
+
+
+@app.get("/")
+def read_root():
+    return {"message": "Hello World during the coronavirus pandemic!"}
+
+
+@app.get("/welcome")
+def welcome(request: Request, is_logged: bool = Depends(is_logged)):
+    return app.templates.TemplateResponse(
+        "welcome.html", {"request": request, "user": "trudnY"}
+    )
+
+
+@app.post("/login")
+async def login_basic(auth: bool = Depends(authethicate)):
+    if not auth:
         response = Response(headers={"WWW-Authenticate": "Basic"}, status_code=401)
         return response
 
-
-@app.post('/logout')
-def logout(SESSIONID: str = Cookie(None)):
-    if SESSIONID is not None and SESSIONID in app.sessions:
-        app.sessions.pop(SESSIONID)
-        response = RedirectResponse(url='/', status_code=status.HTTP_302_FOUND)
-        return response
-    else:
-        response = Response(headers={"WWW-Authenticate": "Basic"}, status_code=401)
-        response.set_cookie('SESSIONID', value='', httponly=True, max_age=0, expires=0)
-        return response
-
-
-@app.get('/patient')
-@authenticate
-def get_patients(SESSIONID: str = Cookie(None)):
-    return app.patients
-
-
-@app.post('/patient')
-@authenticate
-def create_patient(req: PatientRequest, SESSIONID: str = Cookie(None)):
-    patient = req
-    app.next_patient_id += 1
-    app.patients[app.next_patient_id] = patient
-    response = RedirectResponse(url='/patient/{}'.format(app.next_patient_id), status_code=status.HTTP_302_FOUND)
+    response = RedirectResponse(url="/welcome")
+    token = jwt.encode({"magic_key": True}, app.secret_key)
+    response.set_cookie("session", token)
     return response
 
 
-@app.get('/patient/{patient_id}', response_model=PatientResponse)
-@authenticate
-def get_patient(patient_id: int, SESSIONID: str = Cookie(None)):
-    if patient_id not in app.patients:
-        raise HTTPException(status_code=204)
-    else:
-        return app.patients[patient_id]
+@app.post("/logout")
+async def logout(is_logged: bool = Depends(is_logged)):
+    response = RedirectResponse(url="/")
+    response.delete_cookie("session")
+    return response
 
 
-@app.delete('/patient/{patient_id}')
-@authenticate
-def delete_patient(patient_id: int, SESSIONID: str = Cookie(None)):
-    if patient_id not in app.patients:
-        raise HTTPException(status_code=204)
-    else:
-        del app.patients[patient_id]
-        return Response(status_code=204)
+@app.post("/patient")
+def add_patient(patient: Patient, is_logged: bool = Depends(is_logged)):
+    app.storage[app.counter] = patient
+    response = RedirectResponse(url=f"/patient/{app.counter}")
+    app.counter += 1
+    return response
+
+
+@app.get("/patient")
+def show_patients(is_logged: bool = Depends(is_logged)):
+    return app.storage
+
+
+@app.get("/patient/{pk}")
+def show_patient(pk: int, is_logged: bool = Depends(is_logged)):
+    if pk in app.storage:
+        return app.storage.get(pk)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@app.delete("/patient/{pk}")
+def delte_patient(pk: int, is_logged: bool = Depends(is_logged)):
+    if pk in app.storage:
+        del app.storage[pk]
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

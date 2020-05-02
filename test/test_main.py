@@ -10,19 +10,19 @@ def test_create_patient():
     auth_string_raw = "trudnY:PaC13Nt"
     auth_string_encoded = b64encode(bytes(auth_string_raw, "utf-8")).decode("ascii")
     response = client.post('/login', headers={"Authorization": "Basic %s" % auth_string_encoded})
-    assert response.status_code == 302
+    assert response.status_code == 307
 
     json_body = {'name': 'Jan', 'surname': 'Kowalski'}
     response = client.post('/patient', json=json_body, cookies=response.cookies)
 
-    assert response.status_code == 302
+    assert response.status_code == 307
 
 
 def test_get_patient():
     auth_string_raw = "trudnY:PaC13Nt"
     auth_string_encoded = b64encode(bytes(auth_string_raw, "utf-8")).decode("ascii")
     response = client.post('/login', headers={"Authorization": "Basic %s" % auth_string_encoded})
-    assert response.status_code == 302
+    assert response.status_code == 307
 
     # first insert the patient
     json_body = {'name': 'Jan', 'surname': 'Kowalski'}
@@ -52,7 +52,7 @@ def test_login_wrong_password():
 def test_login_no_authorization_header():
     response = client.post('/login')
 
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_login_correct_password():
@@ -60,4 +60,4 @@ def test_login_correct_password():
     auth_string_encoded = b64encode(bytes(auth_string_raw, "utf-8")).decode("ascii")
     response = client.post('/login', headers={"Authorization": "Basic %s" % auth_string_encoded})
 
-    assert response.status_code == 302  # redirected to /welcome
+    assert response.status_code == 307  # redirected to /welcome
