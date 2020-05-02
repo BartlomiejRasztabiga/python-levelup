@@ -77,7 +77,7 @@ async def get_tracks(page: int = 0, per_page: int = 10):
     return tracks
 
 
-@app.get("/tracks/composers/{composer_name}")
+@app.get("/tracks/composers")
 async def get_tracks_by_composer(composer_name: str):
     # app.db_connection.row_factory = sqlite3.Row
     app.db_connection.row_factory = lambda cursor, x: x[0]
