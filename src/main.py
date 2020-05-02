@@ -1,3 +1,4 @@
+import json
 import secrets
 import sqlite3
 
@@ -84,7 +85,9 @@ async def get_tracks_by_composer(composer_name: str):
                                              {'composer_name': composer_name})
     tracks = await cursor.fetchall()
     if len(tracks) == 0:
-        return {'detail': {'error': 'No composer {} found'.format(composer_name)}}
+        error = {'detail': {'error': 'No composer {} found'.format(composer_name)}}
+        response = Response(status_code=404, content=json.dumps(error))
+        return response
     return tracks
 
 
