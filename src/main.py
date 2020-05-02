@@ -18,6 +18,11 @@ class Patient(BaseModel):
     surname: str
 
 
+class Album(BaseModel):
+    title: str
+    artist_id: int
+
+
 class DaftAPI(FastAPI):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -46,7 +51,7 @@ def is_logged(session: str = Depends(app.cookie_sec), silent: bool = False):
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
 
-def authethicate(credentials: Optional[HTTPBasicCredentials] = Depends(app.security)):
+def authenticate(credentials: Optional[HTTPBasicCredentials] = Depends(app.security)):
     if not credentials:
         return False
 
@@ -92,6 +97,38 @@ async def get_tracks_by_composer(composer_name: str):
     return tracks
 
 
+@app.post("/albums")
+async def create_album(album: Album):
+    app.db_connection.row_factory = sqlite3.Row
+    cursor = await app.db_connection.execute("SELECT ArtistId FROM artists WHERE ArtistId = :artist_id",
+                                             {'artist_id': album.artist_id})
+    artist = await cursor.fetchone()
+
+    if artist is None:
+        error = {'detail': {'error': 'No artist with id {} found'.format(album.artist_id)}}
+        response = Response(status_code=404, content=json.dumps(error))
+        return response
+
+    cursor = await app.db_connection.execute("INSERT INTO albums (Title, ArtistId) VALUES(:title, :artist_id)",
+                                             {'title': album.title, 'artist_id': album.artist_id})
+    await app.db_connection.commit()
+    response = Response(status_code=201, content=json.dumps({
+        'AlbumId': cursor.lastrowid,
+        'Title': album.title,
+        'ArtistId': album.artist_id
+    }))
+    return response
+
+
+@app.get("/albums/{album_id}")
+async def get_album(album_id: int):
+    app.db_connection.row_factory = sqlite3.Row
+    cursor = await app.db_connection.execute("SELECT * FROM albums WHERE AlbumId = :album_id ",
+                                             {'album_id': album_id})
+    album = await cursor.fetchone()
+    return album
+
+
 @app.get("/")
 def read_root():
     return {"message": "Hello World during the coronavirus pandemic!"}
@@ -105,7 +142,7 @@ def welcome(request: Request, is_logged: bool = Depends(is_logged)):
 
 
 @app.post("/login")
-async def login_basic(auth: bool = Depends(authethicate)):
+async def login_basic(auth: bool = Depends(authenticate)):
     if not auth:
         response = Response(headers={"WWW-Authenticate": "Basic"}, status_code=401)
         return response
