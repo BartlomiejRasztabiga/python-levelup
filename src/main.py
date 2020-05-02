@@ -68,9 +68,10 @@ async def shutdown():
 
 
 @app.get("/tracks")
-async def get_tracks():
+async def get_tracks(page: int = 0, per_page: int = 10):
     app.db_connection.row_factory = sqlite3.Row
-    cursor = await app.db_connection.execute("SELECT * FROM tracks")
+    cursor = await app.db_connection.execute("SELECT * FROM tracks LIMIT :per_page OFFSET :offset",
+                                             {'per_page': per_page, 'offset': (page - 1) * per_page})
     tracks = await cursor.fetchall()
     return tracks
 
