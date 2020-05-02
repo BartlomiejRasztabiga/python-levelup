@@ -71,8 +71,19 @@ async def shutdown():
 async def get_tracks(page: int = 0, per_page: int = 10):
     app.db_connection.row_factory = sqlite3.Row
     cursor = await app.db_connection.execute("SELECT * FROM tracks ORDER BY TrackId LIMIT :per_page OFFSET :offset ",
-                                             {'per_page': per_page, 'offset': (page) * per_page})
+                                             {'per_page': per_page, 'offset': page * per_page})
     tracks = await cursor.fetchall()
+    return tracks
+
+
+@app.get("/tracks/composers/{composer_name}")
+async def get_tracks_by_composer(composer_name: str):
+    app.db_connection.row_factory = sqlite3.Row
+    cursor = await app.db_connection.execute("SELECT * FROM tracks WHERE Composer = :composer_name ORDER BY Name",
+                                             {'composer_name': composer_name})
+    tracks = await cursor.fetchall()
+    if len(tracks) == 0:
+        return {'detail': {'error': 'No composer {} found'.format(composer_name)}}
     return tracks
 
 
